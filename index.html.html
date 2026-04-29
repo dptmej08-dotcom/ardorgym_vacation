@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HRFlow · 로그인</title>
+<link href="https://fonts.googleapis.com/css2?family=Gmarket+Sans:wght@300;500;700&family=Pretendard:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root { --primary:#5B5FEF;--primary-dark:#4347CC;--primary-light:#EEEEFF;--danger:#EF4444;--gray-50:#F9FAFB;--gray-100:#F3F4F6;--gray-200:#E5E7EB;--gray-400:#9CA3AF;--gray-600:#4B5563;--gray-800:#1F2937;--gray-900:#111827; }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Pretendard',sans-serif;background:#F0F2FF;min-height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .bg-blob{position:fixed;border-radius:50%;filter:blur(80px);opacity:.25;pointer-events:none;animation:float 8s ease-in-out infinite}
+  .b1{width:500px;height:500px;background:#818CF8;top:-100px;left:-100px}
+  .b2{width:400px;height:400px;background:#34D399;bottom:-80px;right:-80px;animation-delay:3s}
+  .b3{width:300px;height:300px;background:#F472B6;top:40%;left:60%;animation-delay:1.5s}
+  @keyframes float{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-20px) scale(1.05)}}
+  .wrap{width:420px;position:relative;z-index:10;animation:fadeUp .5s ease both}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+  .brand{text-align:center;margin-bottom:28px}
+  .brand-logo{width:52px;height:52px;background:var(--primary);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 12px;box-shadow:0 8px 24px rgba(91,95,239,.35)}
+  .brand-name{font-family:'Gmarket Sans',sans-serif;font-size:26px;font-weight:700;color:var(--primary)}
+  .brand-sub{font-size:13px;color:var(--gray-400);margin-top:2px}
+  .card{background:white;border-radius:20px;box-shadow:0 8px 40px rgba(91,95,239,.12);overflow:hidden}
+  .tab-row{display:flex;border-bottom:1px solid var(--gray-100)}
+  .tab{flex:1;padding:16px;border:none;background:transparent;font-family:'Pretendard',sans-serif;font-size:14px;font-weight:600;color:var(--gray-400);cursor:pointer;transition:all .2s;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tab.active{color:var(--primary);border-bottom-color:var(--primary);background:var(--primary-light)}
+  .panel{display:none;padding:32px}
+  .panel.active{display:block;animation:fadeIn .25s ease}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  .panel-title{font-size:20px;font-weight:700;color:var(--gray-900);margin-bottom:4px}
+  .panel-sub{font-size:13px;color:var(--gray-400);margin-bottom:24px}
+  .fg{margin-bottom:16px}
+  .fl{display:block;font-size:13px;font-weight:600;color:var(--gray-600);margin-bottom:6px}
+  .iw{position:relative}
+  .ii{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none}
+  .fi{width:100%;padding:12px 16px 12px 40px;border:1.5px solid var(--gray-200);border-radius:10px;font-size:14px;font-family:'Pretendard',sans-serif;color:var(--gray-800);outline:none;transition:all .2s;background:var(--gray-50)}
+  .fi:focus{border-color:var(--primary);background:white;box-shadow:0 0 0 3px rgba(91,95,239,.1)}
+  .fi.plain{padding-left:16px}
+  .pw-btn{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;color:var(--gray-400)}
+  .btn{width:100%;padding:13px;border:none;border-radius:10px;font-size:15px;font-weight:700;font-family:'Pretendard',sans-serif;cursor:pointer;transition:all .2s;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px}
+  .btn-p{background:var(--primary);color:white;box-shadow:0 4px 16px rgba(91,95,239,.3)}
+  .btn-p:hover{background:var(--primary-dark);transform:translateY(-1px)}
+  .btn-p:disabled{opacity:.6;cursor:not-allowed;transform:none}
+  .err{background:#FEE2E2;color:#DC2626;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:500;margin-bottom:14px;display:none}
+  .suc{background:#DCFCE7;color:#16A34A;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:500;margin-bottom:14px;display:none}
+  .rule{background:var(--primary-light);border-radius:10px;padding:12px 16px;font-size:12px;color:#4347CC;line-height:1.8;margin-bottom:16px}
+  .al{display:block;text-align:center;margin-top:20px;font-size:13px;color:var(--gray-400)}
+  .al a{color:var(--primary);font-weight:600;text-decoration:none}
+  .spinner{width:18px;height:18px;border:2px solid rgba(255,255,255,.4);border-top-color:white;border-radius:50%;animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="bg-blob b1"></div>
+<div class="bg-blob b2"></div>
+<div class="bg-blob b3"></div>
+<div class="wrap">
+  <div class="brand">
+    <div class="brand-logo">🌿</div>
+    <div class="brand-name">HRFlow</div>
+    <div class="brand-sub">스마트 휴가 결재 시스템</div>
+  </div>
+  <div class="card">
+    <div class="tab-row">
+      <button class="tab active" onclick="switchTab('login')">로그인</button>
+      <button class="tab" onclick="switchTab('signup')">회원가입</button>
+    </div>
+    <!-- 로그인 -->
+    <div class="panel active" id="panel-login">
+      <div class="panel-title">환영합니다 👋</div>
+      <div class="panel-sub">계정에 로그인해주세요</div>
+      <div class="err" id="loginError"></div>
+      <div class="fg"><label class="fl">이름</label><div class="iw"><span class="ii">👤</span><input type="text" class="fi" id="loginName" placeholder="홍길동"></div></div>
+      <div class="fg"><label class="fl">비밀번호</label><div class="iw"><span class="ii">🔒</span><input type="password" class="fi" id="loginPw" placeholder="비밀번호 입력" onkeydown="if(event.key==='Enter')doLogin()"><button class="pw-btn" onclick="togglePw('loginPw',this)" type="button">👁️</button></div></div>
+      <button class="btn btn-p" id="loginBtn" onclick="doLogin()">로그인</button>
+      <div class="al">관리자이신가요? <a href="admin.html">관리자 페이지 →</a></div>
+    </div>
+    <!-- 회원가입 -->
+    <div class="panel" id="panel-signup">
+      <div class="panel-title">계정 만들기 ✨</div>
+      <div class="panel-sub">아래 정보를 입력해 가입해주세요</div>
+      <div class="rule">📋 입사 1년 후부터 연차 10일 + 여름휴가 5일 사용 가능</div>
+      <div class="err" id="signupError"></div>
+      <div class="suc" id="signupSuccess"></div>
+      <div class="fg"><label class="fl">이름 <span style="color:var(--danger)">*</span></label><div class="iw"><span class="ii">👤</span><input type="text" class="fi" id="signupName" placeholder="홍길동"></div></div>
+      <div class="fg"><label class="fl">입사일 <span style="color:var(--danger)">*</span></label><input type="date" class="fi plain" id="signupJoinDate"></div>
+      <div class="fg"><label class="fl">비밀번호 <span style="color:var(--danger)">*</span></label><div class="iw"><span class="ii">🔒</span><input type="password" class="fi" id="signupPw" placeholder="4자리 이상"><button class="pw-btn" onclick="togglePw('signupPw',this)" type="button">👁️</button></div></div>
+      <div class="fg"><label class="fl">비밀번호 확인 <span style="color:var(--danger)">*</span></label><div class="iw"><span class="ii">🔒</span><input type="password" class="fi" id="signupPw2" placeholder="재입력" onkeydown="if(event.key==='Enter')doSignup()"><button class="pw-btn" onclick="togglePw('signupPw2',this)" type="button">👁️</button></div></div>
+      <button class="btn btn-p" id="signupBtn" onclick="doSignup()">가입하기</button>
+    </div>
+  </div>
+</div>
+<script>
+const SURL='https://raqslexylkpbpkbpwpzr.supabase.co';
+const SKEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJhcXNsZXh5bGtwYnBrYnB3cHpyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0MDEzMTYsImV4cCI6MjA5Mjk3NzMxNn0.ucf-7PrRmAHsl5_bq_7LYzIUUZ5Tf1Eksa4ihV1eLC0';
+const sb=supabase.createClient(SURL,SKEY);
+
+if(localStorage.getItem('hrflow_currentUser')) window.location.href='vacation-approval.html';
+
+function switchTab(n){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',(i===0&&n==='login')||(i===1&&n==='signup')));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+n).classList.add('active');
+}
+function togglePw(id,btn){const i=document.getElementById(id);i.type=i.type==='password'?'text':'password';btn.textContent=i.type==='password'?'👁️':'🙈';}
+function showErr(id,msg){const e=document.getElementById(id);e.textContent='❌ '+msg;e.style.display='block';setTimeout(()=>e.style.display='none',4000);}
+function setLoad(id,v,label){const b=document.getElementById(id);b.disabled=v;b.innerHTML=v?'<div class="spinner"></div>':label;}
+
+async function doLogin(){
+  const name=document.getElementById('loginName').value.trim();
+  const pw=document.getElementById('loginPw').value;
+  if(!name||!pw){showErr('loginError','이름과 비밀번호를 입력해주세요.');return;}
+  setLoad('loginBtn',true,'로그인');
+  const{data,error}=await sb.from('users').select('*').eq('name',name).eq('password',pw).maybeSingle();
+  setLoad('loginBtn',false,'로그인');
+  if(!data){showErr('loginError','이름 또는 비밀번호가 일치하지 않습니다.');return;}
+  if(!data.approved){showErr('loginError','관리자 승인 대기 중입니다. 잠시만 기다려주세요.');return;}
+  localStorage.setItem('hrflow_currentUser',JSON.stringify(data));
+  window.location.href='vacation-approval.html';
+}
+
+async function doSignup(){
+  const name=document.getElementById('signupName').value.trim();
+  const joinDate=document.getElementById('signupJoinDate').value;
+  const pw=document.getElementById('signupPw').value;
+  const pw2=document.getElementById('signupPw2').value;
+  if(!name){showErr('signupError','이름을 입력해주세요.');return;}
+  if(!joinDate){showErr('signupError','입사일을 선택해주세요.');return;}
+  if(!pw||pw.length<4){showErr('signupError','비밀번호는 4자리 이상이어야 합니다.');return;}
+  if(pw!==pw2){showErr('signupError','비밀번호가 일치하지 않습니다.');return;}
+  setLoad('signupBtn',true,'가입하기');
+  const{data:exist}=await sb.from('users').select('id').eq('name',name).maybeSingle();
+  if(exist){showErr('signupError','이미 존재하는 이름입니다.');setLoad('signupBtn',false,'가입하기');return;}
+  const{error}=await sb.from('users').insert({name,join_date:joinDate,password:pw,dept:'',approved:false});
+  setLoad('signupBtn',false,'가입하기');
+  if(error){showErr('signupError','오류가 발생했습니다. 다시 시도해주세요.');return;}
+  const s=document.getElementById('signupSuccess');
+  s.textContent=`✅ ${name}님 가입 완료! 관리자 승인 후 로그인 가능합니다.`;
+  s.style.display='block';
+  ['signupName','signupJoinDate','signupPw','signupPw2'].forEach(id=>document.getElementById(id).value='');
+  setTimeout(()=>switchTab('login'),2500);
+}
+</script>
+</body>
+</html>
