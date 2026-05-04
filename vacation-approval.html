@@ -230,8 +230,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--gray-50);color:var(--g
                   <select class="fs" id="vType" onchange="onTypeChange()">
                     <option value="annual">연차 휴가</option>
                     <option value="summer">여름휴가</option>
-                    <option value="half_am">반차 (오전)</option>
-                    <option value="half_pm">반차 (오후)</option>
+                    <option value="reserve">예비군</option>
                   </select>
                 </div>
                 <div id="monthNote" class="ib" style="display:none;margin-bottom:12px"></div>
@@ -252,7 +251,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--gray-50);color:var(--g
           <div class="card-body" id="pastBody" style="display:none">
             <div class="wb" style="margin-bottom:16px">⚠️ 이미 사용한 연차를 기록용으로 추가합니다. 자동 승인 처리됩니다.</div>
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:12px;align-items:end">
-              <div class="fg" style="margin:0"><label class="fl">유형</label><select class="fs" id="pastType"><option value="annual">연차</option><option value="summer">여름휴가</option><option value="half_am">반차(오전)</option><option value="half_pm">반차(오후)</option></select></div>
+              <div class="fg" style="margin:0"><label class="fl">유형</label><select class="fs" id="pastType"><option value="annual">연차</option><option value="summer">여름휴가</option><option value="reserve">예비군</option></select></div>
               <div class="fg" style="margin:0"><label class="fl">시작일</label><input type="date" class="fi" id="pastStart"></div>
               <div class="fg" style="margin:0"><label class="fl">종료일</label><input type="date" class="fi" id="pastEnd"></div>
               <button class="btn btn-p" onclick="addPast()">추가</button>
@@ -276,7 +275,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--gray-50);color:var(--g
       <div style="color:var(--gray-500);margin-bottom:4px">현재 내용</div>
       <div id="editCurrentInfo" style="font-weight:600;color:var(--gray-800)"></div>
     </div>
-    <div class="fg"><label class="fl">유형 변경</label><select class="fs" id="editType"><option value="annual">연차</option><option value="summer">여름휴가</option><option value="half_am">반차(오전)</option><option value="half_pm">반차(오후)</option></select></div>
+    <div class="fg"><label class="fl">유형 변경</label><select class="fs" id="editType"><option value="annual">연차</option><option value="summer">여름휴가</option><option value="reserve">예비군</option></select></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div class="fg"><label class="fl">시작일</label><input type="date" class="fi" id="editStart"></div>
       <div class="fg"><label class="fl">종료일</label><input type="date" class="fi" id="editEnd"></div>
@@ -308,9 +307,9 @@ function workdays(s,e){let c=0;for(let d=new Date(s+'T00:00:00');d<=new Date(e+'
 function toast(msg,type=''){const w=document.getElementById('toastWrap');const t=document.createElement('div');t.className=`toast ${type}`;const ic={s:'✅',e:'❌',w:'⚠️'};t.innerHTML=`${ic[type]||'💬'} ${msg}`;w.appendChild(t);setTimeout(()=>t.remove(),3100);}
 function getYM(dateStr){const p=dateStr.split('-');return{y:parseInt(p[0]),m:parseInt(p[1])};}
 
-const TN={annual:'연차',summer:'여름휴가',half_am:'반차(오전)',half_pm:'반차(오후)'};
-const TC={annual:'#EEF2FF',summer:'#FEF3C7',half_am:'#F0FDF4',half_pm:'#F0FDF4'};
-const TI={annual:'🌿',summer:'☀️',half_am:'🌅',half_pm:'🌆'};
+const TN={annual:'연차',summer:'여름휴가',reserve:'예비군'};
+const TC={annual:'#EEF2FF',summer:'#FEF3C7',reserve:'#FFF7ED'};
+const TI={annual:'🌿',summer:'☀️',reserve:'🪖'};
 
 let statsCache={};
 // 지점 내 다른 직원 휴가 날짜 캐시
@@ -330,7 +329,7 @@ async function loadStats(){
   const r=reqs||[];
 
   // 이번달 연차 사용량
-  const usedAThisMonth=r.filter(x=>['annual','half_am','half_pm'].includes(x.type)&&x.start_date>=monthStart&&x.start_date<=monthEnd).reduce((s,x)=>s+parseFloat(x.days),0);
+  const usedAThisMonth=r.filter(x=>['annual','reserve'].includes(x.type)&&x.start_date>=monthStart&&x.start_date<=monthEnd).reduce((s,x)=>s+parseFloat(x.days),0);
   const usedSummer=r.filter(x=>x.type==='summer').reduce((s,x)=>s+parseFloat(x.days),0);
 
   const diffDays=Math.floor((new Date()-new Date(CU.join_date))/(1000*60*60*24));
@@ -341,7 +340,7 @@ async function loadStats(){
   if(nextM>12){nextM=1;nextY++;}
   const nextMonthStart=d2s(nextY,nextM,1);
   const nextMonthEnd=d2s(nextY,nextM,new Date(nextY,nextM,0).getDate());
-  const usedANextMonth=r.filter(x=>["annual","half_am","half_pm"].includes(x.type)&&x.start_date>=nextMonthStart&&x.start_date<=nextMonthEnd).reduce((s,x)=>s+parseFloat(x.days),0);
+  const usedANextMonth=r.filter(x=>["annual","reserve"].includes(x.type)&&x.start_date>=nextMonthStart&&x.start_date<=nextMonthEnd).reduce((s,x)=>s+parseFloat(x.days),0);
   statsCache={
     usedAnnualThisMonth:usedAThisMonth,
     usedAnnualNextMonth:usedANextMonth,
