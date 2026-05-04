@@ -170,15 +170,15 @@ body{font-family:'Pretendard',sans-serif;background:var(--gray-50);color:var(--g
           <div class="join-badge" id="joinBadge">-</div>
           <div class="join-date" id="joinDate">-</div>
           <div class="emp-stats">
-            <div class="stat hi"><div class="v" id="remA">-</div><div class="l">이번달 연차</div></div>
-            <div class="stat used"><div class="v" id="usedA">-</div><div class="l">연차 사용</div></div>
+            <div class="stat hi"><div class="v" id="remA">-</div><div class="l">다음달 연차</div></div>
+            <div class="stat used"><div class="v" id="usedA">-</div><div class="l">다음달 사용</div></div>
             <div class="stat" style="grid-column:1/-1"><div class="v" id="remS" style="color:#F59E0B">-</div><div class="l">여름휴가 잔여</div></div>
           </div>
         </div>
         <div class="vbar">
           <div class="divider" style="margin-top:0"></div>
           <div style="margin-bottom:10px">
-            <div class="bil"><span class="dot" style="background:var(--primary)"></span>이번달 연차 현황</div>
+            <div class="bil"><span class="dot" style="background:var(--primary)"></span>다음달 연차 현황</div>
             <div class="bl"><span id="abl">0/1일</span><span id="apct">0%</span></div>
             <div class="bt"><div class="bf a" id="abf" style="width:0%"></div></div>
           </div>
@@ -193,7 +193,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--gray-50);color:var(--g
         <div class="card-header">📋 휴가 규정</div>
         <div class="card-body" style="font-size:13px;color:var(--gray-500);line-height:1.9">
           <div>✅ 입사 <b>1년 후</b>부터 연차 발생</div>
-          <div>📅 연차는 <b>해당 월에만</b> 사용 가능</div>
+          <div>📅 연차는 <b>전달 10일까지</b> 신청 가능</div>
           <div>☀️ 여름휴가 <b>3일</b> (월 제한 없음)</div>
           <div>🏢 같은 지점 <b>동일 날짜 중복 불가</b></div>
           <div>📌 주말 제외 근무일 기준</div>
@@ -333,7 +333,10 @@ async function loadStats(){
   const usedSummer=r.filter(x=>x.type==='summer').reduce((s,x)=>s+parseFloat(x.days),0);
 
   const diffDays=Math.floor((new Date()-new Date(CU.join_date))/(1000*60*60*24));
-  // 신청 가능 월 계산: 오늘이 10일 이하이면 다음달도 신청 가능
+  // 신청 가능 월 계산:
+  // - 이번달 연차는 지난달에 신청했어야 함 → 항상 신청 불가
+  // - 10일 이전이면 다음달 연차 신청 가능
+  // - 10일 이후이면 신청 가능한 연차 없음
   const todayDate=now.getDate();
   const canApplyNextMonth=todayDate<=10;
   let nextY=thisY,nextM=thisM+1;
@@ -362,15 +365,15 @@ async function loadStats(){
   document.getElementById('empBranch').textContent=CU.branch?`🏢 ${CU.branch}`:'지점 미배정';
   document.getElementById('joinBadge').textContent=`입사 📅 ${diffDays.toLocaleString()}일째`;
   document.getElementById('joinDate').textContent=`입사일: ${fmtDate(CU.join_date)}`;
-  document.getElementById('remA').textContent=statsCache.remainAnnualThisMonth;
-  document.getElementById('usedA').textContent=usedAThisMonth;
+  document.getElementById('remA').textContent=statsCache.remainAnnualNextMonth;
+  document.getElementById('usedA').textContent=usedANextMonth;
   document.getElementById('remS').textContent=statsCache.remainSummer;
 
-  const ap=Math.min(100,Math.round(usedAThisMonth/1*100));
+  const ap=Math.min(100,Math.round(usedANextMonth/1*100));
   const sp=Math.min(100,Math.round(usedSummer/3*100));
   document.getElementById('abf').style.width=ap+'%';
   document.getElementById('sbf').style.width=sp+'%';
-  document.getElementById('abl').textContent=`${usedAThisMonth}/1일`;
+  document.getElementById('abl').textContent=`${usedANextMonth}/1일`;
   document.getElementById('sbl').textContent=`${usedSummer}/3일`;
   document.getElementById('apct').textContent=ap+'%';
   document.getElementById('spct').textContent=sp+'%';
@@ -433,10 +436,9 @@ function renderMini(){
     const ds=d2s(mY,mM,d);
     const dow=(fd+d-1)%7;
     const isBlocked=branchBlockedDates.has(ds);
-    // 연차: 이번달 + (10일 이전이면 다음달도 가능). 여름휴가는 제한 없음
-    const isThisMonth=(mY===thisY&&mM===cm);
+    // 연차: 오직 다음달만 신청 가능 (10일 이전에만). 이번달은 항상 불가. 여름휴가는 제한 없음
     const isNextMonth=(mY===statsCache.nextY&&mM===statsCache.nextM&&statsCache.canApplyNextMonth);
-    const isWrongMonth=!isSummer&&!isThisMonth&&!isNextMonth;
+    const isWrongMonth=!isSummer&&!isNextMonth;
     let c='cd';
     if(ds<ts)c+=' past';
     if(ds===ts)c+=' today';
@@ -457,9 +459,9 @@ function renderMini(){
     mn.style.display='block';
     const {canApplyNextMonth,nextY,nextM,todayDate}=statsCache;
     if(canApplyNextMonth){
-      mn.innerHTML=`📅 지금은 <b>${thisY}년 ${cm}월</b> 또는 <b>${nextY}년 ${nextM}월</b> 연차를 신청할 수 있어요.<br><span style="font-size:11px;color:var(--gray-500)">(매월 10일까지 다음달 신청 가능 · 오늘 ${todayDate}일)</span>`;
+      mn.innerHTML=`📅 <b>${nextY}년 ${nextM}월</b> 연차를 신청할 수 있어요.<br><span style="font-size:11px;color:var(--gray-500)">(매월 10일까지 다음달 연차 신청 가능 · 오늘 ${todayDate}일)</span>`;
     } else {
-      mn.innerHTML=`📅 <b>${thisY}년 ${cm}월</b> 연차만 신청 가능합니다.<br><span style="font-size:11px;color:var(--gray-500)">(10일 이후에는 다음달 신청 불가 · 오늘 ${todayDate}일)</span>`;
+      mn.innerHTML=`📅 현재 신청 가능한 연차가 없습니다.<br><span style="font-size:11px;color:var(--gray-500)">(다음달 연차는 매월 1~10일에 신청 가능 · 오늘 ${todayDate}일)</span>`;
     }
   } else {
     mn.style.display='none';
@@ -473,15 +475,14 @@ function selDay(ds){
   const t=document.getElementById('vType').value;
   const half=t==='half_am'||t==='half_pm';
   const isSummer=t==='summer';
-  // 연차: 이번달 + (10일 이전이면 다음달도 가능)
+  // 연차: 오직 다음달만 신청 가능 (10일 이전에만)
   if(!isSummer){
-    const{thisY,thisM:cm,canApplyNextMonth,nextY,nextM}=statsCache;
+    const{canApplyNextMonth,nextY,nextM}=statsCache;
     const{y,m}=getYM(ds);
-    const isThisM=(y===thisY&&m===cm);
     const isNextM=(y===nextY&&m===nextM&&canApplyNextMonth);
-    if(!isThisM&&!isNextM){
-      if(canApplyNextMonth) toast(`연차는 이번달(${cm}월) 또는 다음달(${nextM}월)만 신청 가능합니다.`,'e');
-      else toast(`연차는 이번달(${cm}월)만 신청 가능합니다. (10일 이후에는 다음달 신청 불가)`,'e');
+    if(!isNextM){
+      if(canApplyNextMonth) toast(`연차는 다음달(${nextM}월)만 신청 가능합니다.`,'e');
+      else toast(`현재 신청 가능한 연차가 없습니다. (매월 1~10일에 다음달 연차 신청 가능)`,'e');
       return;
     }
   }
@@ -519,11 +520,7 @@ function updRange(){
 
   let rem;
   if(t==='summer'){rem=statsCache.remainSummer;}
-  else{
-    const{y,m}=getYM(rS);
-    const isNext=(y===statsCache.nextY&&m===statsCache.nextM);
-    rem=isNext?statsCache.remainAnnualNextMonth:statsCache.remainAnnualThisMonth;
-  }
+  else{rem=statsCache.remainAnnualNextMonth;}
   if(days>rem){warn.style.display='block';warn.textContent=`⚠️ 신청일(${days}일)이 잔여 휴가(${rem}일)를 초과합니다.`;}
   else warn.style.display='none';
 }
@@ -539,14 +536,10 @@ async function submitVacation(){
   const end=rE||rS;
   const days=half?.5:workdays(rS,end);
   if(days<=0){toast('주말을 제외한 근무일이 없습니다.','e');return;}
-  // 다음달 신청인 경우 다음달 잔여 연차 기준
+  // 연차는 항상 다음달 기준
   let rem;
   if(t==='summer'){rem=statsCache.remainSummer;}
-  else{
-    const{y,m}=getYM(rS);
-    const isNext=(y===statsCache.nextY&&m===statsCache.nextM);
-    rem=isNext?statsCache.remainAnnualNextMonth:statsCache.remainAnnualThisMonth;
-  }
+  else{rem=statsCache.remainAnnualNextMonth;}
   if(days>rem){toast(`잔여 휴가(${rem}일)가 부족합니다.`,'e');return;}
 
   // 최종 차단 날짜 재확인
