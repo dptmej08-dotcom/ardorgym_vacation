@@ -270,7 +270,7 @@ async function loadRequests(){
 function renderReqList(id,reqs,action){
   const el=document.getElementById(id);
   if(!reqs.length){el.innerHTML=`<div class="empty"><div class="icon">${action?'🎉':'📋'}</div><p>${action?'대기 중인 신청이 없습니다!':'완료된 내역이 없습니다.'}</p></div>`;return;}
-  const TI={annual:'🌿',summer:'☀️',half_am:'🌅',half_pm:'🌆'};
+  const TI={annual:'🌿',summer:'☀️',reserve:'🪖'};
   el.innerHTML=reqs.map(r=>`
     <div class="ri">
       <div class="rav">${r.emp_name[0]}</div>
@@ -387,7 +387,7 @@ async function loadEmployees(){
   const reqs=allReqs||[];
   tbody.innerHTML=(approved||[]).map(u=>{
     const ur=reqs.filter(r=>r.emp_id===u.id);
-    const usedAMonth=ur.filter(r=>['annual','half_am','half_pm'].includes(r.type)&&r.start_date>=monthStart&&r.start_date<=monthEnd).reduce((s,r)=>s+parseFloat(r.days),0);
+    const usedAMonth=ur.filter(r=>['annual','reserve'].includes(r.type)&&r.start_date>=monthStart&&r.start_date<=monthEnd).reduce((s,r)=>s+parseFloat(r.days),0);
     const usedS=ur.filter(r=>r.type==='summer').reduce((s,r)=>s+parseFloat(r.days),0);
     const diff=Math.floor((new Date()-new Date(u.join_date))/(1000*60*60*24));
     const elig=diff>=365;
