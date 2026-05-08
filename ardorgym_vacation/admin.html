@@ -144,6 +144,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--gray-50);color:var(--g
     <button class="tb active" onclick="switchTab('requests')">📋 휴가 결재 <span class="bn" id="pendBadge" style="display:none">0</span></button>
     <button class="tb" onclick="switchTab('edits')">✏️ 수정 요청 <span class="bn" id="editBadge" style="display:none">0</span></button>
     <button class="tb" onclick="switchTab('employees')">👥 직원 관리 <span class="bn" id="waitBadge" style="display:none">0</span></button>
+    <button class="tb" onclick="switchTab('calendar')">📅 전체 달력</button>
     <button class="tb" onclick="switchTab('settings')">⚙️ 설정</button>
   </div>
 
@@ -191,6 +192,26 @@ body{font-family:'Pretendard',sans-serif;background:var(--gray-50);color:var(--g
         <thead><tr><th>이름</th><th>입사일</th><th>부서/직급</th><th>지점</th><th>연차 현황</th><th>관리</th></tr></thead>
         <tbody id="empBody"></tbody>
       </table></div>
+    </div>
+  </div>
+
+  <!-- 전체 달력 탭 -->
+  <div class="tp" id="tp-calendar">
+    <div class="card">
+      <div class="ch" style="display:flex;align-items:center;justify-content:space-between">
+        <span>📅 전체 직원 휴가 달력</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <select class="fi" id="calBranchFilter" onchange="renderAdminCal()" style="padding:6px 12px;font-size:13px;width:auto">
+            <option value="">전체 지점</option>
+          </select>
+        </div>
+      </div>
+      <div id="adminCalendar"></div>
+    </div>
+    <!-- 지점별 범례 -->
+    <div class="card">
+      <div class="ch">👥 직원 범례</div>
+      <div class="cb" id="calLegend" style="display:flex;flex-wrap:wrap;gap:10px"></div>
     </div>
   </div>
 
@@ -256,11 +277,12 @@ window.addEventListener('load',()=>{
 });
 
 function switchTab(n){
-  document.querySelectorAll('.tb').forEach((b,i)=>b.classList.toggle('active',['requests','edits','employees','settings'][i]===n));
+  document.querySelectorAll('.tb').forEach((b,i)=>b.classList.toggle('active',['requests','edits','employees','calendar','settings'][i]===n));
   document.querySelectorAll('.tp').forEach(p=>p.classList.remove('active'));
   document.getElementById('tp-'+n).classList.add('active');
   if(n==='employees')loadEmployees();
   if(n==='edits')loadEditRequests();
+  if(n==='calendar')initAdminCal();
 }
 
 function toast(msg,type=''){const w=document.getElementById('tw');const t=document.createElement('div');t.className=`toast ${type}`;const ic={s:'✅',e:'❌',w:'⚠️'};t.innerHTML=`${ic[type]||'💬'} ${msg}`;w.appendChild(t);setTimeout(()=>t.remove(),3100);}
@@ -413,16 +435,36 @@ async function loadEmployees(){
   const reqs=allReqs||[];
   tbody.innerHTML=(approved||[]).map(u=>{
     const ur=reqs.filter(r=>r.emp_id===u.id);
-    const usedAMonth=ur.filter(r=>['annual','reserve'].includes(r.type)&&r.start_date>=monthStart&&r.start_date<=monthEnd).reduce((s,r)=>s+parseFloat(r.days),0);
-    const usedS=ur.filter(r=>r.type==='summer').reduce((s,r)=>s+parseFloat(r.days),0);
     const diff=Math.floor((new Date()-new Date(u.join_date))/(1000*60*60*24));
     const elig=diff>=365;
+    // 총 연차 계산 (직원 페이지와 동일 로직)
+    const calcTotal=(joinDateStr)=>{
+      if(!elig) return 0;
+      const jd=new Date(joinDateStr+'T00:00:00');
+      const eligD=new Date(jd);eligD.setFullYear(eligD.getFullYear()+1);
+      const now2=new Date();
+      const nowY=now2.getFullYear(),eligY=eligD.getFullYear(),eligM=eligD.getMonth()+1;
+      if(nowY===eligY){return Math.floor((13-eligM)*(8.5/12));}
+      else return 10;
+    };
+    const totalAnnual=calcTotal(u.join_date);
+    const usedATotal=ur.filter(r=>['annual','reserve'].includes(r.type)).reduce((s,r)=>s+parseFloat(r.days),0);
+    const usedS=ur.filter(r=>r.type==='summer').reduce((s,r)=>s+parseFloat(r.days),0);
     return`<tr>
       <td><div class="enc"><div class="eav">${u.name[0]}</div><div><div style="font-weight:600">${u.name}</div><div style="font-size:11px;color:var(--gray-400)">입사 ${diff}일째</div></div></div></td>
       <td>${fmtDate(u.join_date)}</td>
       <td><input type="text" class="di" value="${u.dept||''}" placeholder="부서/직급" onblur="saveField(${u.id},'dept',this.value)"></td>
       <td><input type="text" class="di" value="${u.branch||''}" placeholder="지점명" onblur="saveField(${u.id},'branch',this.value)"></td>
-      <td>${elig?`<span style="font-size:12px">이번달 <b>${usedAMonth}/1</b>일 · 여름 <b>${usedS}/3</b>일</span>`:`<span style="font-size:12px;color:var(--gray-400)">입사 1년 미만</span>`}</td>
+      <td>${elig
+        ?`<div style="font-size:12px;line-height:1.8">
+            <div>연차 <b style="color:var(--primary)">${usedATotal}/${totalAnnual}</b>일 사용</div>
+            <div style="height:6px;background:var(--gray-100);border-radius:99px;overflow:hidden;margin:3px 0">
+              <div style="height:100%;background:var(--primary);border-radius:99px;width:${totalAnnual>0?Math.min(100,Math.round(usedATotal/totalAnnual*100)):0}%"></div>
+            </div>
+            <div>여름 <b style="color:#F59E0B">${usedS}/3</b>일</div>
+          </div>`
+        :`<span style="font-size:12px;color:var(--gray-400)">입사 1년 미만</span>`
+      }</td>
       <td><button class="btn btn-d" style="font-size:12px;padding:6px 12px" onclick="removeUser(${u.id})">삭제</button></td>
     </tr>`;
   }).join('');
@@ -498,6 +540,96 @@ async function addAdminPast(){
   document.getElementById('adminPastEnd').value='';
   await loadStats();
   toast(`${empName}님 기사용 연차 ${days}일 추가되었습니다. ✅`,'s');
+}
+
+// ── 관리자 달력 ──
+const EMP_COLORS=['#5B5FEF','#22C55E','#F59E0B','#EF4444','#8B5CF6','#06B6D4','#F97316','#EC4899','#14B8A6','#6366F1'];
+let adminCalY, adminCalM, allEmpData=[], allCalReqs=[];
+
+async function initAdminCal(){
+  const now=new Date(); adminCalY=now.getFullYear(); adminCalM=now.getMonth()+1;
+  // 직원 목록 & 휴가 전체 로드
+  const [{data:users},{data:reqs}]=await Promise.all([
+    sb.from('users').select('id,name,branch').eq('approved',true).order('name'),
+    sb.from('vacation_requests').select('*').in('status',['approved','pending']).order('start_date')
+  ]);
+  allEmpData=users||[];
+  allCalReqs=reqs||[];
+  // 지점 필터 옵션 구성
+  const branches=[...new Set(allEmpData.map(u=>u.branch).filter(Boolean))].sort();
+  const sel=document.getElementById('calBranchFilter');
+  sel.innerHTML='<option value="">전체 지점</option>'+branches.map(b=>`<option value="${b}">${b}</option>`).join('');
+  renderAdminCal();
+  renderCalLegend();
+}
+
+function renderAdminCal(){
+  const branchFilter=document.getElementById('calBranchFilter').value;
+  const filteredEmps=branchFilter?allEmpData.filter(u=>u.branch===branchFilter):allEmpData;
+  const empIds=new Set(filteredEmps.map(u=>u.id));
+  const filteredReqs=allCalReqs.filter(r=>empIds.has(r.emp_id));
+
+  // 직원별 색상 맵
+  const colorMap={};
+  allEmpData.forEach((u,i)=>colorMap[u.id]=EMP_COLORS[i%EMP_COLORS.length]);
+
+  const dows=['일','월','화','수','목','금','토'];
+  const fd=new Date(adminCalY,adminCalM-1,1).getDay();
+  const ld=new Date(adminCalY,adminCalM,0).getDate();
+  const todayStr=`${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}-${String(new Date().getDate()).padStart(2,'0')}`;
+
+  function d2s(y,m,d){return`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;}
+  function getEvs(ds){return filteredReqs.filter(r=>ds>=r.start_date&&ds<=r.end_date);}
+
+  let h=`<div style="background:var(--primary);color:white;padding:16px 20px;display:flex;align-items:center;justify-content:space-between">
+    <button onclick="aCalMove(-1)" style="width:32px;height:32px;border:1.5px solid rgba(255,255,255,.3);background:transparent;color:white;border-radius:8px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">‹</button>
+    <span style="font-size:18px;font-weight:700">${adminCalY}년 ${adminCalM}월</span>
+    <button onclick="aCalMove(1)" style="width:32px;height:32px;border:1.5px solid rgba(255,255,255,.3);background:transparent;color:white;border-radius:8px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">›</button>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--gray-100)">
+    ${dows.map((d,i)=>`<div style="text-align:center;padding:10px;font-size:12px;font-weight:700;color:${i===0?'#EF4444':i===6?'#3B82F6':'var(--gray-400)'}">${d}</div>`).join('')}
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(7,1fr)">`;
+
+  for(let i=0;i<fd;i++) h+=`<div style="min-height:100px;border-right:1px solid var(--gray-100);border-bottom:1px solid var(--gray-100);padding:6px"></div>`;
+  for(let d=1;d<=ld;d++){
+    const ds=d2s(adminCalY,adminCalM,d);
+    const dow=(fd+d-1)%7;
+    const evs=getEvs(ds);
+    const isToday=ds===todayStr;
+    const numColor=dow===0?'#EF4444':dow===6?'#3B82F6':'var(--gray-600)';
+    h+=`<div style="min-height:100px;border-right:1px solid var(--gray-100);border-bottom:1px solid var(--gray-100);padding:6px;${(fd+d-1)%7===6?'border-right:none':''}">
+      <div style="width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:${isToday?'700':'500'};color:${isToday?'white':numColor};background:${isToday?'var(--primary)':'transparent'};margin-bottom:3px">${d}</div>
+      ${evs.map(e=>{
+        const color=colorMap[e.emp_id]||'#999';
+        const bg=color+'22';
+        return`<div style="background:${bg};color:${color};border-left:3px solid ${color};border-radius:0 4px 4px 0;padding:2px 5px;font-size:11px;font-weight:600;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${e.emp_name} · ${e.type_name}">${e.emp_name}</div>`;
+      }).join('')}
+    </div>`;
+  }
+  const rem=(7-((fd+ld)%7))%7;
+  for(let i=0;i<rem;i++) h+=`<div style="min-height:100px;border-right:1px solid var(--gray-100);border-bottom:1px solid var(--gray-100);padding:6px"></div>`;
+  h+='</div>';
+  document.getElementById('adminCalendar').innerHTML=h;
+}
+
+function renderCalLegend(){
+  const leg=document.getElementById('calLegend');
+  leg.innerHTML=allEmpData.map((u,i)=>{
+    const color=EMP_COLORS[i%EMP_COLORS.length];
+    return`<div style="display:flex;align-items:center;gap:6px;background:${color}18;border:1px solid ${color}44;border-radius:20px;padding:5px 12px">
+      <div style="width:10px;height:10px;border-radius:50%;background:${color}"></div>
+      <span style="font-size:13px;font-weight:600;color:${color}">${u.name}</span>
+      ${u.branch?`<span style="font-size:11px;color:var(--gray-400)">${u.branch}</span>`:''}
+    </div>`;
+  }).join('');
+}
+
+function aCalMove(d){
+  adminCalM+=d;
+  if(adminCalM>12){adminCalM=1;adminCalY++;}
+  if(adminCalM<1){adminCalM=12;adminCalY--;}
+  renderAdminCal();
 }
 
 function changePw(){
