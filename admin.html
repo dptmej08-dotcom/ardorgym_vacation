@@ -189,7 +189,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--gray-50);color:var(--g
     <div class="card">
       <div class="ch">👥 전체 직원 목록<button class="btn btn-p" onclick="loadEmployees()" style="font-size:12px;padding:6px 12px">새로고침</button></div>
       <div style="padding:0"><table class="emp-table">
-        <thead><tr><th>이름</th><th>입사일</th><th>부서/직급</th><th>지점</th><th>연차 현황</th><th>관리</th></tr></thead>
+        <thead><tr><th>이름</th><th>입사일</th><th>지점</th><th>연차 현황</th><th>관리</th></tr></thead>
         <tbody id="empBody"></tbody>
       </table></div>
     </div>
@@ -453,18 +453,23 @@ async function loadEmployees(){
     return`<tr>
       <td><div class="enc"><div class="eav">${u.name[0]}</div><div><div style="font-weight:600">${u.name}</div><div style="font-size:11px;color:var(--gray-400)">입사 ${diff}일째</div></div></div></td>
       <td>${fmtDate(u.join_date)}</td>
-      <td><input type="text" class="di" value="${u.dept||''}" placeholder="부서/직급" onblur="saveField(${u.id},'dept',this.value)"></td>
       <td><input type="text" class="di" value="${u.branch||''}" placeholder="지점명" onblur="saveField(${u.id},'branch',this.value)"></td>
-      <td>${elig
-        ?`<div style="font-size:12px;line-height:1.8">
-            <div>연차 <b style="color:var(--primary)">${usedATotal}/${totalAnnual}</b>일 사용</div>
-            <div style="height:6px;background:var(--gray-100);border-radius:99px;overflow:hidden;margin:3px 0">
-              <div style="height:100%;background:var(--primary);border-radius:99px;width:${totalAnnual>0?Math.min(100,Math.round(usedATotal/totalAnnual*100)):0}%"></div>
+      <td>
+        <div style="font-size:12px;line-height:1.8">
+          ${elig
+            ?`<div>연차 <b style="color:var(--primary)">${usedATotal}/${totalAnnual}</b>일 사용</div>
+               <div style="height:6px;background:var(--gray-100);border-radius:99px;overflow:hidden;margin:3px 0">
+                 <div style="height:100%;background:var(--primary);border-radius:99px;width:${totalAnnual>0?Math.min(100,Math.round(usedATotal/totalAnnual*100)):0}%"></div>
+               </div>`
+            :`<div style="color:var(--gray-400)">연차 입사 1년 미만</div>`
+          }
+          <div>여름 <b style="color:#F59E0B">${usedS}/3</b>일
+            <div style="height:6px;background:var(--gray-100);border-radius:99px;overflow:hidden;margin:2px 0">
+              <div style="height:100%;background:#F59E0B;border-radius:99px;width:${Math.min(100,Math.round(usedS/3*100))}%"></div>
             </div>
-            <div>여름 <b style="color:#F59E0B">${usedS}/3</b>일</div>
-          </div>`
-        :`<span style="font-size:12px;color:var(--gray-400)">입사 1년 미만</span>`
-      }</td>
+          </div>
+        </div>
+      </td>
       <td><button class="btn btn-d" style="font-size:12px;padding:6px 12px" onclick="removeUser(${u.id})">삭제</button></td>
     </tr>`;
   }).join('');
