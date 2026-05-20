@@ -165,7 +165,6 @@ body{font-family:'Pretendard',sans-serif;background:var(--gray-50);color:var(--g
         <div class="emp-info">
           <div class="emp-av" id="sideAv">-</div>
           <div class="emp-name" id="empName">-</div>
-          <div class="emp-dept" id="empDept">-</div>
           <div class="emp-branch" id="empBranch">-</div>
           <div class="join-badge" id="joinBadge">-</div>
           <div class="join-date" id="joinDate">-</div>
@@ -193,7 +192,8 @@ body{font-family:'Pretendard',sans-serif;background:var(--gray-50);color:var(--g
         <div class="card-header">📋 휴가 규정</div>
         <div class="card-body" style="font-size:13px;color:var(--gray-500);line-height:1.9">
           <div>✅ 입사 <b>1년 후</b>부터 연차 사용 가능</div>
-          <div>🪖 예비군·☀️ 여름휴가는 <b>입사 즉시</b> 사용 가능</div>
+          <div>☀️ 여름휴가 <b>3일</b>은 입사 즉시 사용 가능</div>
+          <div>🪖 예비군도 <b>입사 즉시</b> 사용 가능</div>
           <div>📅 연차는 <b>전달 10일까지</b> 신청 가능</div>
           <div>☀️ 여름휴가 <b>3일</b> (월 제한 없음)</div>
           <div>🏢 같은 지점 <b>동일 날짜 중복 불가</b></div>
@@ -213,7 +213,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--gray-50);color:var(--g
         <div class="card">
           <div class="card-header">휴가 신청</div>
           <div class="card-body">
-            <div id="noElig" class="wb" style="display:none">⚠️ 입사 1년 미만으로 연차는 사용할 수 없습니다. 여름휴가·예비군은 신청 가능합니다.</div>
+            <div id="noElig" class="wb" style="display:none">⚠️ 입사 1년 미만으로 연차는 사용할 수 없습니다.<br><span style="color:var(--success);font-weight:600">✅ 여름휴가(3일)·예비군은 바로 사용 가능합니다.</span></div>
             <div id="noBranch" class="wb" style="display:none">⚠️ 지점이 배정되지 않았습니다. 관리자에게 문의하세요.</div>
             <div class="ag">
               <div>
@@ -346,7 +346,6 @@ async function loadStats(){
   document.getElementById('navAv').textContent=CU.name[0];
   document.getElementById('sideAv').textContent=CU.name[0];
   document.getElementById('empName').textContent=CU.name;
-  document.getElementById('empDept').textContent=CU.dept||'부서 미설정';
   document.getElementById('empBranch').textContent=CU.branch?`🏢 ${CU.branch}`:'지점 미배정';
   document.getElementById('joinBadge').textContent=`입사 📅 ${diffDays.toLocaleString()}일째`;
   document.getElementById('joinDate').textContent=`입사일: ${fmtDate(CU.join_date)}`;
@@ -388,8 +387,10 @@ async function loadStats(){
   document.getElementById('spct').textContent=sp+'%';
 
   const el=document.getElementById('eligNote');
-  if(!statsCache.isEligible){el.innerHTML=`⏳ 연차 가능까지 <b>${365-diffDays}일</b> 남음`;el.style.color='var(--warning)';}
-  else{el.innerHTML='✅ <b>연차 사용 가능</b>';el.style.color='var(--success)';}
+  if(!statsCache.isEligible){
+    el.innerHTML=`⏳ 연차 가능까지 <b>${365-diffDays}일</b> 남음<br><span style="font-size:11px;color:var(--success)">☀️ 여름휴가 ${statsCache.remainSummer}일 사용 가능</span>`;
+    el.style.color='var(--warning)';
+  } else{el.innerHTML='✅ <b>연차 사용 가능</b>';el.style.color='var(--success)';}
   const curType=document.getElementById('vType').value;
   document.getElementById('noElig').style.display=(!statsCache.isEligible&&curType!=='summer'&&curType!=='reserve')?'block':'none';
   document.getElementById('noBranch').style.display=(!CU.branch)?'block':'none';
