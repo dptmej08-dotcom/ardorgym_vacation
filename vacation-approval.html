@@ -194,7 +194,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--gray-50);color:var(--g
           <div>✅ 입사 <b>1년 후</b>부터 연차 사용 가능</div>
           <div>☀️ 여름휴가 <b>3일</b>은 입사 즉시 사용 가능</div>
           <div>🪖 예비군도 <b>입사 즉시</b> 사용 가능</div>
-          <div>📅 연차는 <b>전달 10일까지</b> 신청 가능</div>
+          <div>📅 연차는 <b>사용일 2주 전까지</b> 신청 가능</div>
           <div>☀️ 여름휴가 <b>3일</b> (월 제한 없음)</div>
           <div>🏢 같은 지점 <b>동일 날짜 중복 불가</b></div>
           <div>📌 주말 제외 근무일 기준</div>
@@ -318,28 +318,30 @@ async function loadStats(){
   const usedSummer=r.filter(x=>x.type==='summer').reduce((s,x)=>s+parseFloat(x.days),0);
 
   const diffDays=Math.floor((new Date()-new Date(CU.join_date))/(1000*60*60*24));
-  // 신청 가능 월 계산:
-  // - 이번달 연차는 지난달에 신청했어야 함 → 항상 신청 불가
-  // - 10일 이전이면 다음달 연차 신청 가능
-  // - 10일 이후이면 신청 가능한 연차 없음
-  const todayDate=now.getDate();
-  const canApplyNextMonth=todayDate<=10;
-  let nextY=thisY,nextM=thisM+1;
-  if(nextM>12){nextM=1;nextY++;}
-  const nextMonthStart=d2s(nextY,nextM,1);
-  const nextMonthEnd=d2s(nextY,nextM,new Date(nextY,nextM,0).getDate());
-  const usedANextMonth=r.filter(x=>["annual","reserve"].includes(x.type)&&x.start_date>=nextMonthStart&&x.start_date<=nextMonthEnd).reduce((s,x)=>s+parseFloat(x.days),0);
+  // 신청 가능 날짜: 오늘로부터 2주(14일) 후부터 선택 가능
+  const minDate=new Date(now); minDate.setDate(minDate.getDate()+14);
+  const minSelectDate=d2s(minDate.getFullYear(),minDate.getMonth()+1,minDate.getDate());
+  // 총 연차 계산 (사이드바용)
+  const calcTotalAnnualInner=()=>{
+    if(diffDays<365)return 0;
+    const jd=new Date(CU.join_date+'T00:00:00');
+    const eligD=new Date(jd);eligD.setFullYear(eligD.getFullYear()+1);
+    const nowY2=now.getFullYear(),eligY=eligD.getFullYear(),eligM=eligD.getMonth()+1;
+    if(nowY2===eligY){return Math.floor((13-eligM)*(8.5/12));}
+    return 10;
+  };
+  const totalAnnual=calcTotalAnnualInner();
+  const usedATotal=r.filter(x=>['annual','reserve'].includes(x.type)).reduce((s,x)=>s+parseFloat(x.days),0);
   statsCache={
-    usedAnnualThisMonth:usedAThisMonth,
-    usedAnnualNextMonth:usedANextMonth,
     usedSummer,
-    remainAnnualThisMonth:Math.max(0,1-usedAThisMonth),
-    remainAnnualNextMonth:Math.max(0,1-usedANextMonth),
     remainSummer:Math.max(0,3-usedSummer),
     diffDays,
     isEligible:diffDays>=365,
     thisY,thisM,
-    canApplyNextMonth,nextY,nextM,todayDate
+    minSelectDate,
+    totalAnnual,
+    usedATotal,
+    remainAnnual:Math.max(0,totalAnnual-usedATotal)
   };
 
   document.getElementById('navName').textContent=CU.name;
@@ -449,9 +451,9 @@ function renderMini(){
     const ds=d2s(mY,mM,d);
     const dow=(fd+d-1)%7;
     const isBlocked=branchBlockedDates.has(ds);
-    // 연차: 오직 다음달만 신청 가능 (10일 이전에만). 이번달은 항상 불가. 여름휴가는 제한 없음
-    const isNextMonth=(mY===statsCache.nextY&&mM===statsCache.nextM&&statsCache.canApplyNextMonth);
-    const isWrongMonth=!isSummer&&!isNextMonth;
+    // 2주 이내 날짜는 선택 불가 (여름휴가 포함 전체 적용)
+    const isTooSoon=ds<statsCache.minSelectDate;
+    const isWrongMonth=isTooSoon;
     let c='cd';
     if(ds<ts)c+=' past';
     if(ds===ts)c+=' today';
@@ -461,24 +463,15 @@ function renderMini(){
     if(rS&&rE){if(ds===rS&&rS===rE)c+=' sel';else if(ds===rS)c+=' rs';else if(ds===rE)c+=' re';else if(ds>rS&&ds<rE)c+=' in-r';}
     else if(rS&&ds===rS)c+=' sel';
     const clickable=!isBlocked&&!isWrongMonth;
-    h+=`<div class="${c}" ${clickable?`onclick="selDay('${ds}')"`:''} title="${isBlocked?'같은 지점 직원이 이미 휴가 중':isWrongMonth?'연차는 이번 달만 사용 가능':''}">${d}</div>`;
+    h+=`<div class="${c}" ${clickable?`onclick="selDay('${ds}')"`:''} title="${isBlocked?'같은 지점 직원이 이미 휴가 중':isWrongMonth?'신청일로부터 2주 후부터 선택 가능':''}">${d}</div>`;
   }
   h+='</div>';
   document.getElementById('miniCal').innerHTML=h;
 
   // 월 안내
   const mn=document.getElementById('monthNote');
-  if(!isSummer){
-    mn.style.display='block';
-    const {canApplyNextMonth,nextY,nextM,todayDate}=statsCache;
-    if(canApplyNextMonth){
-      mn.innerHTML=`📅 <b>${nextY}년 ${nextM}월</b> 연차를 신청할 수 있어요.<br><span style="font-size:11px;color:var(--gray-500)">(매월 10일까지 다음달 연차 신청 가능 · 오늘 ${todayDate}일)</span>`;
-    } else {
-      mn.innerHTML=`📅 현재 신청 가능한 연차가 없습니다.<br><span style="font-size:11px;color:var(--gray-500)">(다음달 연차는 매월 1~10일에 신청 가능 · 오늘 ${todayDate}일)</span>`;
-    }
-  } else {
-    mn.style.display='none';
-  }
+  mn.style.display='block';
+  mn.innerHTML=`📅 오늘로부터 <b>2주 후(${statsCache.minSelectDate.replace(/-/g,'.')})</b> 이후 날짜만 선택 가능합니다.`;
 }
 
 function mMove(d){mM+=d;if(mM>12){mM=1;mY++;}if(mM<1){mM=12;mY--;}renderMini();}
@@ -495,16 +488,10 @@ function selDay(ds){
   const t=document.getElementById('vType').value;
   const half=t==='half_am'||t==='half_pm';
   const isSummer=t==='summer';
-  // 연차: 오직 다음달만 신청 가능 (10일 이전에만)
-  if(!isSummer){
-    const{canApplyNextMonth,nextY,nextM}=statsCache;
-    const{y,m}=getYM(ds);
-    const isNextM=(y===nextY&&m===nextM&&canApplyNextMonth);
-    if(!isNextM){
-      if(canApplyNextMonth) toast(`연차는 다음달(${nextM}월)만 신청 가능합니다.`,'e');
-      else toast(`현재 신청 가능한 연차가 없습니다. (매월 1~10일에 다음달 연차 신청 가능)`,'e');
-      return;
-    }
+  // 2주 이내 날짜 차단 (모든 유형)
+  if(ds<statsCache.minSelectDate){
+    toast(`신청일로부터 2주 후(${statsCache.minSelectDate.replace(/-/g,'.')}) 이후 날짜만 선택 가능합니다.`,'e');
+    return;
   }
   // 차단 날짜
   if(branchBlockedDates.has(ds)){toast('같은 지점 직원이 이미 해당 날짜에 휴가 중입니다.','e');return;}
@@ -540,7 +527,7 @@ function updRange(){
 
   let rem;
   if(t==='summer'){rem=statsCache.remainSummer;}
-  else{rem=statsCache.remainAnnualNextMonth;}
+  else{rem=statsCache.remainAnnual||0;}
   if(days>rem){warn.style.display='block';warn.textContent=`⚠️ 신청일(${days}일)이 잔여 휴가(${rem}일)를 초과합니다.`;}
   else warn.style.display='none';
 }
@@ -556,10 +543,9 @@ async function submitVacation(){
   const end=rE||rS;
   const days=half?.5:workdays(rS,end);
   if(days<=0){toast('주말을 제외한 근무일이 없습니다.','e');return;}
-  // 연차는 항상 다음달 기준
   let rem;
   if(t==='summer'){rem=statsCache.remainSummer;}
-  else{rem=statsCache.remainAnnualNextMonth;}
+  else{rem=statsCache.remainAnnualNextMonth||10;}
   if(days>rem){toast(`잔여 휴가(${rem}일)가 부족합니다.`,'e');return;}
 
   // 최종 차단 날짜 재확인
