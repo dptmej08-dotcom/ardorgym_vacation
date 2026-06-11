@@ -352,38 +352,16 @@ async function loadStats(){
   document.getElementById('joinBadge').textContent=`입사 📅 ${diffDays.toLocaleString()}일째`;
   document.getElementById('joinDate').textContent=`입사일: ${fmtDate(CU.join_date)}`;
   // ── 총 연차 계산 ──
-  // 입사 1년 미만: 0개
-  // 입사 1년 후 첫 해: 남은 월 수 × (8.5 ÷ 12), 소수점 절사
-  // 입사 2년차 이후: 연간 10개
-  const calcTotalAnnual = () => {
-    if(!statsCache.isEligible) return 0;
-    const joinDate=new Date(CU.join_date+'T00:00:00');
-    const eligDate=new Date(joinDate); eligDate.setFullYear(eligDate.getFullYear()+1); // 연차 시작일 (입사 1년 후)
-    const now2=new Date();
-    const nowY=now2.getFullYear(), nowM=now2.getMonth()+1;
-    const eligY=eligDate.getFullYear(), eligM=eligDate.getMonth()+1;
-    // 연차 시작 연도와 현재 연도 비교
-    if(nowY===eligY){
-      // 첫 해: 연차 시작 월 ~ 12월 = 남은 월 수
-      const remainMonths = 13 - eligM; // eligM월부터 12월까지
-      return Math.floor(remainMonths * (8.5 / 12));
-    } else {
-      // 2년차 이후: 10개
-      return 10;
-    }
-  };
-  const totalAnnual=calcTotalAnnual();
-  const usedATotal=r.filter(x=>['annual','reserve'].includes(x.type)).reduce((s,x)=>s+parseFloat(x.days),0);
-  const remATotal=Math.max(0,totalAnnual-usedATotal);
-  document.getElementById('remA').textContent=remATotal;
-  document.getElementById('usedA').textContent=usedATotal;
+  // 사이드바 업데이트 (statsCache에서 참조)
+  document.getElementById('remA').textContent=statsCache.remainAnnual;
+  document.getElementById('usedA').textContent=statsCache.usedATotal;
   document.getElementById('remS').textContent=statsCache.remainSummer;
 
-  const ap=totalAnnual>0?Math.min(100,Math.round(usedATotal/totalAnnual*100)):0;
+  const ap=statsCache.totalAnnual>0?Math.min(100,Math.round(statsCache.usedATotal/statsCache.totalAnnual*100)):0;
   const sp=Math.min(100,Math.round(usedSummer/3*100));
   document.getElementById('abf').style.width=ap+'%';
   document.getElementById('sbf').style.width=sp+'%';
-  document.getElementById('abl').textContent=`${usedATotal}/${totalAnnual}일`;
+  document.getElementById('abl').textContent=`${statsCache.usedATotal}/${statsCache.totalAnnual}일`;
   document.getElementById('sbl').textContent=`${usedSummer}/3일`;
   document.getElementById('apct').textContent=ap+'%';
   document.getElementById('spct').textContent=sp+'%';
