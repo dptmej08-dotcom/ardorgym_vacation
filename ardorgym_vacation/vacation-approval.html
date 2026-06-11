@@ -296,7 +296,10 @@ const TN={annual:'연차',summer:'여름휴가',reserve:'예비군'};
 const TC={annual:'#EEF2FF',summer:'#FEF3C7',reserve:'#FFF7ED'};
 const TI={annual:'🌿',summer:'☀️',reserve:'🪖'};
 
-let statsCache={};
+let statsCache={
+  minSelectDate: (()=>{const d=new Date();d.setDate(d.getDate()+14);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;})(),
+  remainSummer:3, remainAnnual:0, totalAnnual:0, usedATotal:0, usedSummer:0, isEligible:false
+};
 // 지점 내 다른 직원 휴가 날짜 캐시
 let branchBlockedDates=new Set();
 
@@ -695,7 +698,8 @@ async function updBadge(){
   b.style.display=count?'':'none';b.textContent=count;
 }
 
-initMini();initBig();loadStats();updBadge();
+initBig();
+loadStats().then(()=>{ initMini(); updBadge(); });
 </script>
 </body>
 </html>
