@@ -472,13 +472,7 @@ async function loadEmployees(){
           <div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--gray-100)">
             <div style="color:var(--gray-500);font-size:11px;margin-bottom:4px">특별휴가 🎉 지급</div>
             <div style="display:flex;align-items:center;gap:6px">
-              <input type="number" min="0" max="30" step="1"
-                style="width:52px;padding:4px 8px;border:1.5px solid var(--gray-200);border-radius:6px;font-size:13px;font-family:'Pretendard',sans-serif;text-align:center;outline:none"
-                value="${parseFloat(u.special_vacation||0)}"
-                onblur="saveSpecialVacation(${u.id},this.value)"
-                onfocus="this.style.borderColor='var(--purple)'"
-                onblur2="this.style.borderColor='var(--gray-200)'"
-                title="특별휴가 일수 입력 후 클릭 밖으로 나가면 저장">
+              <input type="number" min="0" max="30" step="1" style="width:52px;padding:4px 8px;border:1.5px solid var(--gray-200);border-radius:6px;font-size:13px;font-family:'Pretendard',sans-serif;text-align:center;outline:none" value="${parseFloat(u.special_vacation||0)}" onblur="saveSpecialVacation(${u.id},this.value)" title="특별휴가 일수 입력 후 클릭 밖으로 나가면 저장">
               <span style="color:var(--gray-400)">일 지급</span>
               <span style="color:var(--purple);font-weight:600">(사용 ${ur.filter(r=>r.type==='special').reduce((s,r)=>s+parseFloat(r.days),0)}일)</span>
             </div>
@@ -551,7 +545,7 @@ async function addAdminPast(){
   if(!start){toast('시작일을 선택해주세요.','e');return;}
   const days=workdaysAdmin(start,end);
   if(days<=0){toast('주말을 제외한 근무일이 없습니다.','e');return;}
-  const TN={annual:'연차',summer:'여름휴가',reserve:'예비군'};
+  const TN={annual:'연차',summer:'여름휴가',special:'특별휴가',reserve:'예비군'};
   const now=new Date();
   const today=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
   const{error}=await sb.from('vacation_requests').insert({
