@@ -402,7 +402,8 @@ async function loadStats(){
   document.getElementById('noBranch').style.display=(!CU.branch)?'block':'none';
   // 여름휴가는 1년 미만도 신청 가능
   const vType=document.getElementById('vType').value;
-  document.getElementById('submitBtn').disabled=(!statsCache.isEligible&&vType!=='summer'&&vType!=='reserve'&&vType!=='special')||!CU.branch;
+  const freeTypes=['summer','reserve','special'];
+  document.getElementById('submitBtn').disabled=(!statsCache.isEligible&&!freeTypes.includes(vType))||(!CU.branch&&!freeTypes.includes(vType));
 
   // 지점 차단 날짜 로드
   await loadBranchBlockedDates();
@@ -485,7 +486,8 @@ function onTypeChange(){
   const t=document.getElementById('vType').value;
   const elig=statsCache.isEligible;
   document.getElementById('noElig').style.display=(!elig&&t!=='summer'&&t!=='reserve'&&t!=='special')?'block':'none';
-  document.getElementById('submitBtn').disabled=(!elig&&t!=='summer'&&t!=='reserve'&&t!=='special')||!CU.branch;
+  const freeT=['summer','reserve','special'];
+  document.getElementById('submitBtn').disabled=(!elig&&!freeT.includes(t))||(!CU.branch&&!freeT.includes(t));
 }
 
 function selDay(ds){
@@ -538,9 +540,10 @@ function updRange(){
 }
 
 async function submitVacation(){
-  if(!statsCache.isEligible&&t!=='summer'&&t!=='reserve'&&t!=='special'){toast('입사 1년 미만으로 연차를 사용할 수 없습니다.','e');return;}
-  if(!CU.branch){toast('지점이 배정되지 않았습니다.','e');return;}
   const t=document.getElementById('vType').value;
+  if(!statsCache.isEligible&&t!=='summer'&&t!=='reserve'&&t!=='special'){toast('입사 1년 미만으로 연차를 사용할 수 없습니다.','e');return;}
+  const needsBranch=!['summer','reserve','special'].includes(t);
+  if(needsBranch&&!CU.branch){toast('지점이 배정되지 않았습니다.','e');return;}
   const half=t==='half_am'||t==='half_pm';
   const isSummer=t==='summer';
   if(!rS){toast('날짜를 선택해주세요.','e');return;}
