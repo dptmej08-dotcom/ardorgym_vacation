@@ -172,6 +172,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--gray-50);color:var(--g
             <div class="stat hi"><div class="v" id="remA">-</div><div class="l">총 연차 잔여</div></div>
             <div class="stat used"><div class="v" id="usedA">-</div><div class="l">총 연차 사용</div></div>
             <div class="stat" style="grid-column:1/-1"><div class="v" id="remS" style="color:#F59E0B">-</div><div class="l">여름휴가 잔여</div></div>
+            <div class="stat" style="grid-column:1/-1;display:none" id="specialStat"><div class="v" id="remSpecial" style="color:#9333EA">-</div><div class="l">특별휴가 잔여 🎉</div></div>
           </div>
         </div>
         <div class="vbar">
@@ -185,6 +186,11 @@ body{font-family:'Pretendard',sans-serif;background:var(--gray-50);color:var(--g
             <div class="bil"><span class="dot" style="background:#F59E0B"></span>여름휴가 현황</div>
             <div class="bl"><span id="sbl">0/3일</span><span id="spct">0%</span></div>
             <div class="bt"><div class="bf s" id="sbf" style="width:0%"></div></div>
+          </div>
+          <div id="specialBarWrap" style="display:none">
+            <div class="bil"><span class="dot" style="background:#9333EA"></span>특별휴가 현황 🎉</div>
+            <div class="bl"><span id="spbl">0/0일</span><span id="sppct">0%</span></div>
+            <div class="bt"><div class="bf" id="spbf" style="width:0%;background:#9333EA"></div></div>
           </div>
         </div>
       </div>
@@ -231,6 +237,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--gray-50);color:var(--g
                   <select class="fs" id="vType" onchange="onTypeChange()">
                     <option value="annual">연차 휴가</option>
                     <option value="summer">여름휴가</option>
+                    <option value="special">특별휴가 🎉</option>
                     <option value="reserve">예비군</option>
                   </select>
                 </div>
@@ -292,9 +299,9 @@ function workdays(s,e){let c=0;for(let d=new Date(s+'T00:00:00');d<=new Date(e+'
 function toast(msg,type=''){const w=document.getElementById('toastWrap');const t=document.createElement('div');t.className=`toast ${type}`;const ic={s:'✅',e:'❌',w:'⚠️'};t.innerHTML=`${ic[type]||'💬'} ${msg}`;w.appendChild(t);setTimeout(()=>t.remove(),3100);}
 function getYM(dateStr){const p=dateStr.split('-');return{y:parseInt(p[0]),m:parseInt(p[1])};}
 
-const TN={annual:'연차',summer:'여름휴가',reserve:'예비군'};
-const TC={annual:'#EEF2FF',summer:'#FEF3C7',reserve:'#FFF7ED'};
-const TI={annual:'🌿',summer:'☀️',reserve:'🪖'};
+const TN={annual:'연차',summer:'여름휴가',special:'특별휴가',reserve:'예비군'};
+const TC={annual:'#EEF2FF',summer:'#FEF3C7',special:'#FDF4FF',reserve:'#FFF7ED'};
+const TI={annual:'🌿',summer:'☀️',special:'🎉',reserve:'🪖'};
 
 let statsCache={
   minSelectDate: (()=>{const d=new Date();d.setDate(d.getDate()+14);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;})(),
@@ -335,6 +342,10 @@ async function loadStats(){
   };
   const totalAnnual=calcTotalAnnualInner();
   const usedATotal=r.filter(x=>['annual','reserve'].includes(x.type)).reduce((s,x)=>s+parseFloat(x.days),0);
+  // 특별휴가: DB users 테이블의 special_vacation 필드 - 사용량
+  const specialTotal=parseFloat(CU.special_vacation||0);
+  const usedSpecial=r.filter(x=>x.type==='special').reduce((s,x)=>s+parseFloat(x.days),0);
+  const remainSpecial=Math.max(0,specialTotal-usedSpecial);
   statsCache={
     usedSummer,
     remainSummer:Math.max(0,3-usedSummer),
@@ -344,7 +355,8 @@ async function loadStats(){
     minSelectDate,
     totalAnnual,
     usedATotal,
-    remainAnnual:Math.max(0,totalAnnual-usedATotal)
+    remainAnnual:Math.max(0,totalAnnual-usedATotal),
+    specialTotal,usedSpecial,remainSpecial
   };
 
   document.getElementById('navName').textContent=CU.name;
@@ -359,6 +371,17 @@ async function loadStats(){
   document.getElementById('remA').textContent=statsCache.remainAnnual;
   document.getElementById('usedA').textContent=statsCache.usedATotal;
   document.getElementById('remS').textContent=statsCache.remainSummer;
+  // 특별휴가 - 있을 때만 표시
+  const hasSp=statsCache.specialTotal>0;
+  document.getElementById('specialStat').style.display=hasSp?'':'none';
+  document.getElementById('remSpecial').textContent=statsCache.remainSpecial;
+  document.getElementById('specialBarWrap').style.display=hasSp?'':'none';
+  if(hasSp){
+    const spPct=Math.min(100,Math.round(statsCache.usedSpecial/statsCache.specialTotal*100));
+    document.getElementById('spbf').style.width=spPct+'%';
+    document.getElementById('spbl').textContent=`${statsCache.usedSpecial}/${statsCache.specialTotal}일`;
+    document.getElementById('sppct').textContent=spPct+'%';
+  }
 
   const ap=statsCache.totalAnnual>0?Math.min(100,Math.round(statsCache.usedATotal/statsCache.totalAnnual*100)):0;
   const sp=Math.min(100,Math.round(usedSummer/3*100));
@@ -375,11 +398,11 @@ async function loadStats(){
     el.style.color='var(--warning)';
   } else{el.innerHTML='✅ <b>연차 사용 가능</b>';el.style.color='var(--success)';}
   const curType=document.getElementById('vType').value;
-  document.getElementById('noElig').style.display=(!statsCache.isEligible&&curType!=='summer'&&curType!=='reserve')?'block':'none';
+  document.getElementById('noElig').style.display=(!statsCache.isEligible&&curType!=='summer'&&curType!=='reserve'&&curType!=='special')?'block':'none';
   document.getElementById('noBranch').style.display=(!CU.branch)?'block':'none';
   // 여름휴가는 1년 미만도 신청 가능
   const vType=document.getElementById('vType').value;
-  document.getElementById('submitBtn').disabled=(!statsCache.isEligible&&vType!=='summer'&&vType!=='reserve')||!CU.branch;
+  document.getElementById('submitBtn').disabled=(!statsCache.isEligible&&vType!=='summer'&&vType!=='reserve'&&vType!=='special')||!CU.branch;
 
   // 지점 차단 날짜 로드
   await loadBranchBlockedDates();
@@ -461,8 +484,8 @@ function onTypeChange(){
   // 여름휴가는 1년 미만도 신청 가능하므로 버튼/안내 갱신
   const t=document.getElementById('vType').value;
   const elig=statsCache.isEligible;
-  document.getElementById('noElig').style.display=(!elig&&t!=='summer'&&t!=='reserve')?'block':'none';
-  document.getElementById('submitBtn').disabled=(!elig&&t!=='summer'&&t!=='reserve')||!CU.branch;
+  document.getElementById('noElig').style.display=(!elig&&t!=='summer'&&t!=='reserve'&&t!=='special')?'block':'none';
+  document.getElementById('submitBtn').disabled=(!elig&&t!=='summer'&&t!=='reserve'&&t!=='special')||!CU.branch;
 }
 
 function selDay(ds){
@@ -508,13 +531,14 @@ function updRange(){
 
   let rem;
   if(t==='summer'){rem=statsCache.remainSummer;}
+  else if(t==='special'){rem=statsCache.remainSpecial||0;}
   else{rem=statsCache.remainAnnual||0;}
   if(days>rem){warn.style.display='block';warn.textContent=`⚠️ 신청일(${days}일)이 잔여 휴가(${rem}일)를 초과합니다.`;}
   else warn.style.display='none';
 }
 
 async function submitVacation(){
-  if(!statsCache.isEligible&&t!=='summer'&&t!=='reserve'){toast('입사 1년 미만으로 연차를 사용할 수 없습니다.','e');return;}
+  if(!statsCache.isEligible&&t!=='summer'&&t!=='reserve'&&t!=='special'){toast('입사 1년 미만으로 연차를 사용할 수 없습니다.','e');return;}
   if(!CU.branch){toast('지점이 배정되지 않았습니다.','e');return;}
   const t=document.getElementById('vType').value;
   const half=t==='half_am'||t==='half_pm';
