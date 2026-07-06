@@ -2,6 +2,9 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ARDOR HR · 관리자</title>
 <link href="https://fonts.googleapis.com/css2?family=Gmarket+Sans:wght@300;500;700&family=Pretendard:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -177,6 +180,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--gray-50);color:var(--g
             <select class="fi" id="adminPastType">
               <option value="annual">연차</option>
               <option value="summer">여름휴가</option>
+              <option value="special">특별휴가 🎉</option>
               <option value="reserve">예비군</option>
             </select>
           </div>
@@ -189,7 +193,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--gray-50);color:var(--g
     <div class="card">
       <div class="ch">👥 전체 직원 목록<button class="btn btn-p" onclick="loadEmployees()" style="font-size:12px;padding:6px 12px">새로고침</button></div>
       <div style="padding:0"><table class="emp-table">
-        <thead><tr><th>이름</th><th>입사일</th><th>지점</th><th>연차 현황</th><th>관리</th></tr></thead>
+        <thead><tr><th>이름</th><th>입사일</th><th>지점</th><th>연차 현황 / 특별휴가</th><th>관리</th></tr></thead>
         <tbody id="empBody"></tbody>
       </table></div>
     </div>
@@ -318,7 +322,7 @@ async function loadRequests(){
 function renderReqList(id,reqs,action){
   const el=document.getElementById(id);
   if(!reqs.length){el.innerHTML=`<div class="empty"><div class="icon">${action?'🎉':'📋'}</div><p>${action?'대기 중인 신청이 없습니다!':'완료된 내역이 없습니다.'}</p></div>`;return;}
-  const TI={annual:'🌿',summer:'☀️',reserve:'🪖'};
+  const TI={annual:'🌿',summer:'☀️',special:'🎉',reserve:'🪖'};
   el.innerHTML=reqs.map(r=>`
     <div class="ri">
       <div class="rav">${r.emp_name[0]}</div>
@@ -437,7 +441,6 @@ async function loadEmployees(){
     const ur=reqs.filter(r=>r.emp_id===u.id);
     const diff=Math.floor((new Date()-new Date(u.join_date))/(1000*60*60*24));
     const elig=diff>=365;
-    // 총 연차 계산 (직원 페이지와 동일 로직)
     const calcTotal=(joinDateStr)=>{
       if(!elig) return 0;
       const jd=new Date(joinDateStr+'T00:00:00');
@@ -450,28 +453,34 @@ async function loadEmployees(){
     const totalAnnual=calcTotal(u.join_date);
     const usedATotal=ur.filter(r=>['annual','reserve'].includes(r.type)).reduce((s,r)=>s+parseFloat(r.days),0);
     const usedS=ur.filter(r=>r.type==='summer').reduce((s,r)=>s+parseFloat(r.days),0);
-    return`<tr>
-      <td><div class="enc"><div class="eav">${u.name[0]}</div><div><div style="font-weight:600">${u.name}</div><div style="font-size:11px;color:var(--gray-400)">입사 ${diff}일째</div></div></div></td>
-      <td>${fmtDate(u.join_date)}</td>
-      <td><input type="text" class="di" value="${u.branch||''}" placeholder="지점명" onblur="saveField(${u.id},'branch',this.value)"></td>
-      <td>
-        <div style="font-size:12px;line-height:1.8">
-          ${elig
-            ?`<div>연차 <b style="color:var(--primary)">${usedATotal}/${totalAnnual}</b>일 사용</div>
-               <div style="height:6px;background:var(--gray-100);border-radius:99px;overflow:hidden;margin:3px 0">
-                 <div style="height:100%;background:var(--primary);border-radius:99px;width:${totalAnnual>0?Math.min(100,Math.round(usedATotal/totalAnnual*100)):0}%"></div>
-               </div>`
-            :`<div style="color:var(--gray-400)">연차 입사 1년 미만</div>`
-          }
-          <div>여름 <b style="color:#F59E0B">${usedS}/3</b>일
-            <div style="height:6px;background:var(--gray-100);border-radius:99px;overflow:hidden;margin:2px 0">
-              <div style="height:100%;background:#F59E0B;border-radius:99px;width:${Math.min(100,Math.round(usedS/3*100))}%"></div>
-            </div>
-          </div>
-        </div>
-      </td>
-      <td><button class="btn btn-d" style="font-size:12px;padding:6px 12px" onclick="removeUser(${u.id})">삭제</button></td>
-    </tr>`;
+    const usedSp=ur.filter(r=>r.type==='special').reduce((s,r)=>s+parseFloat(r.days),0);
+    const spTotal=parseFloat(u.special_vacation||0);
+    const annualBar=elig
+      ?('<div>연차 <b style="color:#5B5FEF">'+usedATotal+'/'+totalAnnual+'</b>일 사용</div>'
+        +'<div style="height:6px;background:#F3F4F6;border-radius:99px;overflow:hidden;margin:3px 0">'
+        +'<div style="height:100%;background:#5B5FEF;border-radius:99px;width:'+( totalAnnual>0?Math.min(100,Math.round(usedATotal/totalAnnual*100)):0)+'%"></div></div>')
+      :'<div style="color:#9CA3AF">연차 입사 1년 미만</div>';
+    const summerBar='<div>여름 <b style="color:#F59E0B">'+usedS+'/3</b>일'
+      +'<div style="height:6px;background:#F3F4F6;border-radius:99px;overflow:hidden;margin:2px 0">'
+      +'<div style="height:100%;background:#F59E0B;border-radius:99px;width:'+Math.min(100,Math.round(usedS/3*100))+'%"></div></div></div>';
+    const specialBox='<div style="margin-top:6px;padding-top:6px;border-top:1px solid #F3F4F6">'
+      +'<div style="color:#6B7280;font-size:11px;margin-bottom:4px">특별휴가 🎉 지급</div>'
+      +'<div style="display:flex;align-items:center;gap:6px">'
+      +'<input type="number" min="0" max="30" step="1" style="width:52px;padding:4px 8px;border:1.5px solid #E5E7EB;border-radius:6px;font-size:13px;text-align:center;outline:none" '
+      +'value="'+spTotal+'" onblur="saveSpecialVacation('+u.id+',this.value)">'
+      +'<span style="color:#9CA3AF">일 지급</span>'
+      +'<span style="color:#7C3AED;font-weight:600">(사용 '+usedSp+'일)</span>'
+      +'</div></div>';
+    return '<tr>'
+      +'<td><div class="enc"><div class="eav">'+u.name[0]+'</div><div>'
+      +'<div style="font-weight:600">'+u.name+'</div>'
+      +'<div style="font-size:11px;color:#9CA3AF">입사 '+diff+'일째</div>'
+      +'</div></div></td>'
+      +'<td>'+fmtDate(u.join_date)+'</td>'
+      +'<td><input type="text" class="di" value="'+(u.branch||'')+'" placeholder="지점명" onblur="saveField('+(u.id)+',\'branch\',this.value)"></td>'
+      +'<td><div style="font-size:12px;line-height:1.8">'+annualBar+summerBar+specialBox+'</div></td>'
+      +'<td><button class="btn btn-d" style="font-size:12px;padding:6px 12px" onclick="removeUser('+u.id+')">삭제</button></td>'
+      +'</tr>';
   }).join('');
   await loadStats();
 }
@@ -493,6 +502,12 @@ async function removeUser(id){
 }
 async function saveField(id,field,val){
   await sb.from('users').update({[field]:val}).eq('id',id);
+}
+
+async function saveSpecialVacation(id,val){
+  const v=parseFloat(val)||0;
+  await sb.from('users').update({special_vacation:v}).eq('id',id);
+  toast(`특별휴가 ${v}일로 업데이트했습니다. 🎉`,'s');
 }
 
 // 관리자 기사용 연차 추가
@@ -530,7 +545,7 @@ async function addAdminPast(){
   if(!start){toast('시작일을 선택해주세요.','e');return;}
   const days=workdaysAdmin(start,end);
   if(days<=0){toast('주말을 제외한 근무일이 없습니다.','e');return;}
-  const TN={annual:'연차',summer:'여름휴가',reserve:'예비군'};
+  const TN={annual:'연차',summer:'여름휴가',special:'특별휴가',reserve:'예비군'};
   const now=new Date();
   const today=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
   const{error}=await sb.from('vacation_requests').insert({
