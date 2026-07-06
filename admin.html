@@ -190,7 +190,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--gray-50);color:var(--g
     <div class="card">
       <div class="ch">👥 전체 직원 목록<button class="btn btn-p" onclick="loadEmployees()" style="font-size:12px;padding:6px 12px">새로고침</button></div>
       <div style="padding:0"><table class="emp-table">
-        <thead><tr><th>이름</th><th>입사일</th><th>지점</th><th>연차 현황</th><th>특별휴가 🎉</th><th>관리</th></tr></thead>
+        <thead><tr><th>이름</th><th>입사일</th><th>지점</th><th>연차 현황 / 특별휴가</th><th>관리</th></tr></thead>
         <tbody id="empBody"></tbody>
       </table></div>
     </div>
@@ -469,20 +469,20 @@ async function loadEmployees(){
               <div style="height:100%;background:#F59E0B;border-radius:99px;width:${Math.min(100,Math.round(usedS/3*100))}%"></div>
             </div>
           </div>
-          ${parseFloat(u.special_vacation||0)>0?`<div>특별 🎉 <b style="color:#9333EA">${ur.filter(r=>r.type==='special').reduce((s,r)=>s+parseFloat(r.days),0)}/${u.special_vacation}</b>일</div>`:''}
-        </div>
-      </td>
-      <td>
-        <div style="display:flex;align-items:center;gap:6px">
-          <input type="number" min="0" max="30" step="1"
-            class="di" style="width:60px;text-align:center"
-            value="${parseFloat(u.special_vacation||0)}"
-            onblur="saveSpecialVacation(${u.id},this.value)"
-            title="특별휴가 일수 입력 후 클릭 밖으로 나가면 저장">
-          <span style="font-size:12px;color:var(--gray-400)">일</span>
-        </div>
-        <div style="font-size:11px;color:var(--purple);margin-top:2px">
-          사용: ${ur.filter(r=>r.type==='special').reduce((s,r)=>s+parseFloat(r.days),0)}일
+          <div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--gray-100)">
+            <div style="color:var(--gray-500);font-size:11px;margin-bottom:4px">특별휴가 🎉 지급</div>
+            <div style="display:flex;align-items:center;gap:6px">
+              <input type="number" min="0" max="30" step="1"
+                style="width:52px;padding:4px 8px;border:1.5px solid var(--gray-200);border-radius:6px;font-size:13px;font-family:'Pretendard',sans-serif;text-align:center;outline:none"
+                value="${parseFloat(u.special_vacation||0)}"
+                onblur="saveSpecialVacation(${u.id},this.value)"
+                onfocus="this.style.borderColor='var(--purple)'"
+                onblur2="this.style.borderColor='var(--gray-200)'"
+                title="특별휴가 일수 입력 후 클릭 밖으로 나가면 저장">
+              <span style="color:var(--gray-400)">일 지급</span>
+              <span style="color:var(--purple);font-weight:600">(사용 ${ur.filter(r=>r.type==='special').reduce((s,r)=>s+parseFloat(r.days),0)}일)</span>
+            </div>
+          </div>
         </div>
       </td>
       <td><button class="btn btn-d" style="font-size:12px;padding:6px 12px" onclick="removeUser(${u.id})">삭제</button></td>
