@@ -438,7 +438,6 @@ async function loadEmployees(){
     const ur=reqs.filter(r=>r.emp_id===u.id);
     const diff=Math.floor((new Date()-new Date(u.join_date))/(1000*60*60*24));
     const elig=diff>=365;
-    // 총 연차 계산 (직원 페이지와 동일 로직)
     const calcTotal=(joinDateStr)=>{
       if(!elig) return 0;
       const jd=new Date(joinDateStr+'T00:00:00');
@@ -451,36 +450,34 @@ async function loadEmployees(){
     const totalAnnual=calcTotal(u.join_date);
     const usedATotal=ur.filter(r=>['annual','reserve'].includes(r.type)).reduce((s,r)=>s+parseFloat(r.days),0);
     const usedS=ur.filter(r=>r.type==='summer').reduce((s,r)=>s+parseFloat(r.days),0);
-    return`<tr>
-      <td><div class="enc"><div class="eav">${u.name[0]}</div><div><div style="font-weight:600">${u.name}</div><div style="font-size:11px;color:var(--gray-400)">입사 ${diff}일째</div></div></div></td>
-      <td>${fmtDate(u.join_date)}</td>
-      <td><input type="text" class="di" value="${u.branch||''}" placeholder="지점명" onblur="saveField(${u.id},'branch',this.value)"></td>
-      <td>
-        <div style="font-size:12px;line-height:1.8">
-          ${elig
-            ?`<div>연차 <b style="color:var(--primary)">${usedATotal}/${totalAnnual}</b>일 사용</div>
-               <div style="height:6px;background:var(--gray-100);border-radius:99px;overflow:hidden;margin:3px 0">
-                 <div style="height:100%;background:var(--primary);border-radius:99px;width:${totalAnnual>0?Math.min(100,Math.round(usedATotal/totalAnnual*100)):0}%"></div>
-               </div>`
-            :`<div style="color:var(--gray-400)">연차 입사 1년 미만</div>`
-          }
-          <div>여름 <b style="color:#F59E0B">${usedS}/3</b>일
-            <div style="height:6px;background:var(--gray-100);border-radius:99px;overflow:hidden;margin:2px 0">
-              <div style="height:100%;background:#F59E0B;border-radius:99px;width:${Math.min(100,Math.round(usedS/3*100))}%"></div>
-            </div>
-          </div>
-          <div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--gray-100)">
-            <div style="color:var(--gray-500);font-size:11px;margin-bottom:4px">특별휴가 🎉 지급</div>
-            <div style="display:flex;align-items:center;gap:6px">
-              <input type="number" min="0" max="30" step="1" style="width:52px;padding:4px 8px;border:1.5px solid var(--gray-200);border-radius:6px;font-size:13px;text-align:center;outline:none" value="${parseFloat(u.special_vacation||0)}" onblur="saveSpecialVacation(${u.id},this.value)" title="특별휴가 일수 입력 후 클릭 밖으로 나가면 저장">
-              <span style="color:var(--gray-400)">일 지급</span>
-              <span style="color:var(--purple);font-weight:600">(사용 ${ur.filter(r=>r.type==='special').reduce((s,r)=>s+parseFloat(r.days),0)}일)</span>
-            </div>
-          </div>
-        </div>
-      </td>
-      <td><button class="btn btn-d" style="font-size:12px;padding:6px 12px" onclick="removeUser(${u.id})">삭제</button></td>
-    </tr>`;
+    const usedSp=ur.filter(r=>r.type==='special').reduce((s,r)=>s+parseFloat(r.days),0);
+    const spTotal=parseFloat(u.special_vacation||0);
+    const annualBar=elig
+      ?('<div>연차 <b style="color:#5B5FEF">'+usedATotal+'/'+totalAnnual+'</b>일 사용</div>'
+        +'<div style="height:6px;background:#F3F4F6;border-radius:99px;overflow:hidden;margin:3px 0">'
+        +'<div style="height:100%;background:#5B5FEF;border-radius:99px;width:'+( totalAnnual>0?Math.min(100,Math.round(usedATotal/totalAnnual*100)):0)+'%"></div></div>')
+      :'<div style="color:#9CA3AF">연차 입사 1년 미만</div>';
+    const summerBar='<div>여름 <b style="color:#F59E0B">'+usedS+'/3</b>일'
+      +'<div style="height:6px;background:#F3F4F6;border-radius:99px;overflow:hidden;margin:2px 0">'
+      +'<div style="height:100%;background:#F59E0B;border-radius:99px;width:'+Math.min(100,Math.round(usedS/3*100))+'%"></div></div></div>';
+    const specialBox='<div style="margin-top:6px;padding-top:6px;border-top:1px solid #F3F4F6">'
+      +'<div style="color:#6B7280;font-size:11px;margin-bottom:4px">특별휴가 🎉 지급</div>'
+      +'<div style="display:flex;align-items:center;gap:6px">'
+      +'<input type="number" min="0" max="30" step="1" style="width:52px;padding:4px 8px;border:1.5px solid #E5E7EB;border-radius:6px;font-size:13px;text-align:center;outline:none" '
+      +'value="'+spTotal+'" onblur="saveSpecialVacation('+u.id+',this.value)">'
+      +'<span style="color:#9CA3AF">일 지급</span>'
+      +'<span style="color:#7C3AED;font-weight:600">(사용 '+usedSp+'일)</span>'
+      +'</div></div>';
+    return '<tr>'
+      +'<td><div class="enc"><div class="eav">'+u.name[0]+'</div><div>'
+      +'<div style="font-weight:600">'+u.name+'</div>'
+      +'<div style="font-size:11px;color:#9CA3AF">입사 '+diff+'일째</div>'
+      +'</div></div></td>'
+      +'<td>'+fmtDate(u.join_date)+'</td>'
+      +'<td><input type="text" class="di" value="'+(u.branch||'')+'" placeholder="지점명" onblur="saveField('+(u.id)+',\'branch\',this.value)"></td>'
+      +'<td><div style="font-size:12px;line-height:1.8">'+annualBar+summerBar+specialBox+'</div></td>'
+      +'<td><button class="btn btn-d" style="font-size:12px;padding:6px 12px" onclick="removeUser('+u.id+')">삭제</button></td>'
+      +'</tr>';
   }).join('');
   await loadStats();
 }
